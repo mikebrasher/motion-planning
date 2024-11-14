@@ -1,0 +1,18 @@
+[package]
+name = "rrt"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[patch.crates-io]
+vulkano = { path = "../vulkano/vulkano" }
+vulkano-shaders = { path = "../vulkano/vulkano-shaders" }
+vulkano-util = { path = "../vulkano/vulkano-util" }
+
+[dependencies]
+bytemuck = "1.19.0"
+glam = "0.29.2"
+vulkano = "0.34.0"
+vulkano-shaders = "0.34.0"
+vulkano-util = "0.34.0"
+winit = "0.30.5"
