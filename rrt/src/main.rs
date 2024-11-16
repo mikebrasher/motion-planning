@@ -1,8 +1,7 @@
-use glam::Vec2;
 use incremental::RenderPassIncremental;
 use input::InputState;
 use std::{error::Error, sync::Arc, time::Duration};
-use tree::ArenaTree;
+use tree::RapidlyExploringRandomTree;
 use vulkano::{
     command_buffer::allocator::{
         StandardCommandBufferAllocator, StandardCommandBufferAllocatorCreateInfo,
@@ -29,13 +28,6 @@ mod input;
 mod tree;
 
 fn main() -> Result<(), impl Error> {
-    let mut at = ArenaTree::new(Vec2::new(0.0, 0.0));
-    let head = 0;
-    let idx_child = at.insert(Vec2::new(1.0, 1.0), head).unwrap();
-    at.insert(Vec2::new(2.0, 2.0), idx_child).unwrap();
-    let idx = at.closest_node(Vec2::new(2.1, 2.1)).unwrap();
-    println!("closest index is {idx}");
-
     // Create the event loop.
     let event_loop = EventLoop::new().unwrap();
     let mut app = App::new(&event_loop);
@@ -99,6 +91,8 @@ impl ApplicationHandler for App {
             event_loop,
             &self.context,
             &WindowDescriptor {
+                width: 768.0,
+                height: 768.0,
                 title: "RRT".to_string(),
                 present_mode: PresentMode::Fifo,
                 ..Default::default()
@@ -118,7 +112,7 @@ impl ApplicationHandler for App {
 
         let gfx_queue = self.context.graphics_queue();
 
-        let max_step = 50;
+        let max_step = 400;
         let max_vertex = 2 * max_step;
 
         let mut render_pass = RenderPassIncremental::new(
@@ -130,14 +124,13 @@ impl ApplicationHandler for App {
             max_vertex,
         );
 
-        let h = 1.0 / max_step as f32;
-        for idx_step in 0..max_step {
+        let seed = 12345;
+        let mut rrt = RapidlyExploringRandomTree::new(seed);
+        for _ in 0..max_step {
             // add incremental vertex data
-            let f = 2.0 * h * (idx_step as f32);
-            let x = -1.0 + f;
-            let y = 1.0 - h - f;
-            render_pass.add_vertex(x, y);
-            render_pass.add_vertex(x + h, y + h);
+            let edge = rrt.increment().unwrap();
+            render_pass.add_vertex(edge.tail.x as f32, edge.tail.y as f32);
+            render_pass.add_vertex(edge.head.x as f32, edge.head.y as f32);
         }
 
         self.rcx = Some(RenderContext {
@@ -190,14 +183,6 @@ impl ApplicationHandler for App {
                     }
                     Ok(future) => future,
                 };
-
-                // add incremental vertex data
-                let h = 1.0 / rcx.render_pass.max_vertex() as f32;
-                let f = 2.0 * h * (rcx.render_pass.idx_vertex() as f32);
-                let x = -1.0 + f;
-                let y = 1.0 - h - f;
-                rcx.render_pass.add_vertex(x, y);
-                rcx.render_pass.add_vertex(x + h, y + h);
 
                 // Render the image over the swapchain image, inputting the previous future.
                 let after_renderpass_future = rcx.render_pass.render(
