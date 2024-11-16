@@ -1,6 +1,8 @@
+use glam::Vec2;
 use incremental::RenderPassIncremental;
 use input::InputState;
 use std::{error::Error, sync::Arc, time::Duration};
+use tree::ArenaTree;
 use vulkano::{
     command_buffer::allocator::{
         StandardCommandBufferAllocator, StandardCommandBufferAllocatorCreateInfo,
@@ -24,8 +26,16 @@ use winit::{
 
 mod incremental;
 mod input;
+mod tree;
 
 fn main() -> Result<(), impl Error> {
+    let mut at = ArenaTree::new(Vec2::new(0.0, 0.0));
+    let head = 0;
+    let idx_child = at.insert(Vec2::new(1.0, 1.0), head).unwrap();
+    at.insert(Vec2::new(2.0, 2.0), idx_child).unwrap();
+    let idx = at.closest_node(Vec2::new(2.1, 2.1)).unwrap();
+    println!("closest index is {idx}");
+
     // Create the event loop.
     let event_loop = EventLoop::new().unwrap();
     let mut app = App::new(&event_loop);
@@ -83,7 +93,7 @@ impl App {
 
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        println!("Resumed");
+        // println!("Resumed");
 
         let _id = self.windows.create_window(
             event_loop,
@@ -150,15 +160,15 @@ impl ApplicationHandler for App {
 
         match event {
             WindowEvent::CloseRequested => {
-                println!("Close Requested");
+                // println!("Close Requested");
                 event_loop.exit();
             }
             WindowEvent::Resized(..) | WindowEvent::ScaleFactorChanged { .. } => {
-                println!("Resized");
+                // println!("Resized");
                 renderer.resize();
             }
             WindowEvent::RedrawRequested => {
-                println!("Redraw Requested");
+                // println!("Redraw Requested");
 
                 // Skip this frame when minimized.
                 if window_size.width == 0 || window_size.height == 0 {
@@ -211,7 +221,7 @@ impl ApplicationHandler for App {
     }
 
     fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
-        println!("About to Wait");
+        // println!("About to Wait");
         self.windows
             .get_primary_renderer_mut()
             .unwrap()
@@ -239,10 +249,10 @@ impl RenderContext {
         };
 
         if self.input_state.reset_step {
-            println!("Reset step = 0");
+            // println!("Reset step = 0");
             self.idx_step = 0;
         }
 
-        println!("Update step = {}", self.idx_step);
+        // println!("Update step = {}", self.idx_step);
     }
 }
