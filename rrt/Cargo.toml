@@ -12,6 +12,7 @@ vulkano-util = { path = "../vulkano/vulkano-util" }
 [dependencies]
 bytemuck = "1.19.0"
 glam = "0.29.2"
+rand = "0.8.5"
 vulkano = "0.34.0"
 vulkano-shaders = "0.34.0"
 vulkano-util = "0.34.0"
