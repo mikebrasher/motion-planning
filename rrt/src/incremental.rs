@@ -214,14 +214,6 @@ impl RenderPassIncremental {
         }
     }
 
-    pub fn max_vertex(&self) -> usize {
-        self.max_vertex
-    }
-
-    pub fn idx_vertex(&self) -> usize {
-        self.idx_vertex
-    }
-
     pub fn add_vertex(&mut self, x: f32, y: f32) {
         if self.idx_vertex < self.max_vertex {
             {
