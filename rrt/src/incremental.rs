@@ -240,6 +240,7 @@ impl RenderPassIncremental {
         before_future: F,
         target: Arc<ImageView>,
         image_index: u32,
+        vertex_count: u32,
     ) -> Box<dyn GpuFuture>
     where
         F: GpuFuture + 'static,
@@ -317,7 +318,7 @@ impl RenderPassIncremental {
             .bind_vertex_buffers(0, self.device_buffer.clone())
             .unwrap();
 
-        unsafe { command_buffer_builder.draw(self.idx_vertex as u32, 1, 0, 0) }.unwrap();
+        unsafe { command_buffer_builder.draw(vertex_count, 1, 0, 0) }.unwrap();
 
         // End render pass.
         command_buffer_builder

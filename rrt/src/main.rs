@@ -44,6 +44,8 @@ struct App {
 struct RenderContext {
     render_pass: RenderPassIncremental,
     input_state: InputState,
+    idx_step: usize,
+    max_step: usize,
 }
 
 impl App {
@@ -106,18 +108,33 @@ impl ApplicationHandler for App {
 
         let gfx_queue = self.context.graphics_queue();
 
-        let max_vertex = 100;
+        let max_step = 50;
+        let max_vertex = 2 * max_step;
+
+        let mut render_pass = RenderPassIncremental::new(
+            gfx_queue.clone(),
+            self.command_buffer_allocator.clone(),
+            self.descriptor_set_allocator.clone(),
+            window_renderer.swapchain_format(),
+            window_renderer.swapchain_image_views(),
+            max_vertex,
+        );
+
+        let h = 1.0 / max_step as f32;
+        for idx_step in 0..max_step {
+            // add incremental vertex data
+            let f = 2.0 * h * (idx_step as f32);
+            let x = -1.0 + f;
+            let y = 1.0 - h - f;
+            render_pass.add_vertex(x, y);
+            render_pass.add_vertex(x + h, y + h);
+        }
 
         self.rcx = Some(RenderContext {
-            render_pass: RenderPassIncremental::new(
-                gfx_queue.clone(),
-                self.command_buffer_allocator.clone(),
-                self.descriptor_set_allocator.clone(),
-                window_renderer.swapchain_format(),
-                window_renderer.swapchain_image_views(),
-                max_vertex,
-            ),
+            render_pass,
             input_state: InputState::new(),
+            max_step,
+            idx_step: 0,
         });
     }
 
@@ -148,6 +165,8 @@ impl ApplicationHandler for App {
                     return;
                 }
 
+                rcx.update_state_after_inputs();
+
                 // Start the frame.
                 let before_pipeline_future = match renderer.acquire(
                     Some(Duration::from_millis(1000)),
@@ -175,16 +194,55 @@ impl ApplicationHandler for App {
                     before_pipeline_future,
                     renderer.swapchain_image_view(),
                     renderer.image_index(),
+                    2 * rcx.idx_step as u32,
                 );
 
                 // Finish the frame (which presents the view), inputting the last future. Wait for
                 // the future so resources are not in use when we render.
                 renderer.present(after_renderpass_future, true);
+
+                rcx.input_state.reset();
             }
             _ => {
                 // Pass event for the app to handle our inputs.
                 rcx.input_state.handle_input(window_size, &event);
             }
         }
+    }
+
+    fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
+        println!("About to Wait");
+        self.windows
+            .get_primary_renderer_mut()
+            .unwrap()
+            .window()
+            .request_redraw();
+    }
+}
+
+impl RenderContext {
+    fn update_state_after_inputs(&mut self) {
+        self.idx_step = if self.input_state.scroll_delta > 0.0 {
+            if self.idx_step < self.max_step - 1 {
+                self.idx_step + 1
+            } else {
+                self.idx_step
+            }
+        } else if self.input_state.scroll_delta < 0.0 {
+            if self.idx_step > 0 {
+                self.idx_step - 1
+            } else {
+                self.idx_step
+            }
+        } else {
+            self.idx_step
+        };
+
+        if self.input_state.reset_step {
+            println!("Reset step = 0");
+            self.idx_step = 0;
+        }
+
+        println!("Update step = {}", self.idx_step);
     }
 }
